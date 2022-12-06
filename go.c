@@ -12,7 +12,7 @@
 int main() {
     setlocale(LC_ALL, ""); // Enables unicode characters
     initscr(); // Initialises the curses mode (clears the screen) and allocates memory for stdscr
-    raw(); // Control characters (like CTRL-C) are passed to the program without generating a signal
+  /*  raw(); // Control characters (like CTRL-C) are passed to the program without generating a signal*/
     noecho(); // Disables echoing of the input
     keypad(stdscr, TRUE); // Enables function keys and arrow keys
     curs_set(0); // Hides the cursor
@@ -69,20 +69,27 @@ int main() {
                     move_cursor(board_window, 'x', 's', &cursor_y, &cursor_x, board_array);
                 }
                 break;
-            case KEY_ENTER:
-                input_print = "enter";
-                if (0 <= cursor_y + 1 && cursor_y + 1 < BOARD_SIZE ) {
-                    cursor_y ++;
-                }
-                break;
             case 'i':
                 input_print = "i";
-/*                do () {
-
-                } while();*/
-                break;
-            case 'c':
-                input_print = "c";
+                print_legend_var(legend_window, legend_y, input_print, cursor_y, cursor_x, score_black, score_white);
+                int exit = 0;
+                while(exit != 1) {
+                    input = getch();
+                    switch (input) {
+                        case '\n':
+                            // Place a stone
+                            wattron(board_window, COLOR_PAIR(2));
+                            mvwprintw(board_window, BOARD_START_Y + cursor_y, BOARD_START_X + cursor_x, "\u25CF");
+                            wattroff(board_window, COLOR_PAIR(2));
+                            board_array[cursor_y][cursor_x] = "\u25CF";
+                            wrefresh(board_window);
+                            exit = 1;
+                            break;
+                        case 'c':
+                            exit = 1;
+                            break;
+                    }
+                }
                 break;
             case 's':
                 input_print = "s";
@@ -106,12 +113,25 @@ int main() {
 }
 
 
+/*
+struct player {
+    enum {
+        BLACK,
+        WHITE
+    };
+    int color;
+    int score;
+} black, white;
+*/
+
+
 void print_legend_const(WINDOW *window, int *y, FILE *file) {
     char line[50];
     while (fgets(line, sizeof line, file) != NULL) {
         mvwprintw(window, *y, LEGEND_START_X, "%s", line); // Write text to the stdscr buffer
         *y += 1;
     }
+    box(window, 0, 0);
     refresh(); // Dumps the contents from the stdscr buffer on the screen
     wrefresh(window);
 }
@@ -129,8 +149,6 @@ void print_legend_var(WINDOW *window, int y, char *input, int cursor_y, int curs
     mvwprintw(window, y, LEGEND_START_X, "    Black: %d     ", score_black);
     y += 1;
     mvwprintw(window, y, LEGEND_START_X, "    White: %d     ", score_white);
-    box(window, 0, 0);
-    refresh();
     wrefresh(window);
 }
 
@@ -190,7 +208,6 @@ void print_board(WINDOW *window, char *board_array[][BOARD_SIZE_X]) {
         }
     }
     box(window, 0, 0);
-    refresh();
     wrefresh(window);
 }
 
@@ -214,12 +231,5 @@ void move_cursor(WINDOW *window, char y_or_x, char action, int *y, int *x, char 
     wattron(window, COLOR_PAIR(2));
     mvwprintw(window, BOARD_START_Y + *y, BOARD_START_X + *x, "%s", board_array[*y][*x]);
     wattroff(window, COLOR_PAIR(2));
-    refresh();
     wrefresh(window);
 }
-
-
-enum {
-    BLACK,
-    WHITE
-};

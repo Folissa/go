@@ -21,6 +21,8 @@
 #define LEGEND_START_Y ((HEIGHT - LEGEND_HEIGHT) / 2) // Starting y coordinate for the legend.
 #define LEGEND_START_X ((WIDTH - LEGEND_WIDTH) / 2) // Starting x coordinate for the legend.
 
+/*typedef player;*/
+
 void print_legend_const(WINDOW *window, int *y, FILE *file); // Prints out the unchangeable part of the legend on the screen.
 void print_legend_var(WINDOW *window, int y, char *input, int cursor_y, int cursor_x, int score_black, int score_white); // Prints out the changeable part of the legend on the screen.
 void create_board(char *board_array[][BOARD_SIZE_X]); // Creates the board.
