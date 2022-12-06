@@ -1,0 +1,12 @@
+Anna Berkowska, 189395
+Controls:
+    arrows - move
+    q - quit
+    enter - confirm choice and end player's turn
+    c - cancel current action
+    i - place a stone on the board
+    s - save the game state
+    n - start a new game
+    l - load the game state
+    f - finish the game
+Current cursor position:
