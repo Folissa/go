@@ -17,6 +17,7 @@ int main() {
 
 
     char *board_array[BOARD_SIZE][BOARD_SIZE_X];
+    char *board_array_template[BOARD_SIZE][BOARD_SIZE_X];
     char *input_print = "";
 
     int logical_board_array[BOARD_SIZE][BOARD_SIZE];
@@ -32,6 +33,7 @@ int main() {
         endwin();
         return 1;
     }
+    create_board(board_array_template);
     new_game(legend_window, board_window, legend_const, black, white, &legend_y, &cursor_y, &cursor_x, &input_print, &current_player, logical_board_array, board_array);
     fclose(legend_const);
     do {
@@ -70,11 +72,11 @@ int main() {
                     input = getch();
                     switch (input) {
                         case '\n':
-                            exit = place_stone(board_window, &current_player, cursor_y, cursor_x, logical_board_array, board_array);
+                            exit = place_stone(board_window, black, white, &current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
                             if (exit == 1) {
                                 input_print = "enter";
                                 print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
-                                place_stone(board_window, &current_player, cursor_y, cursor_x, logical_board_array, board_array);
+                                place_stone(board_window, black, white, &current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
                                 break;
                             }
                             else {
@@ -207,41 +209,41 @@ void print_legend_var(WINDOW *window, PLAYER *black, PLAYER *white, int legend_y
 }
 
 
-void create_board(char *board_array[][BOARD_SIZE_X]) {
+void create_board(char *array[][BOARD_SIZE_X]) {
     for (int y = 0; y < BOARD_SIZE; y ++) {
         for (int x = 0; x < BOARD_SIZE_X; x ++) {
             if (x == 0 && y == 0) {
-                board_array[y][x] = "\u250F";
+                array[y][x] = "\u250F";
             }
             else if ((x % 2 == 1 && y == 0) || (x % 2 == 1 && y == BOARD_SIZE - 1)) {
-                board_array[y][x] = "\u2501";
+                array[y][x] = "\u2501";
             }
             else if (x % 2 == 1) {
-                board_array[y][x] = "\u2500";
+                array[y][x] = "\u2500";
             }
             else if (y == 0 && x > 0 && x < BOARD_SIZE_X - 1) {
-                board_array[y][x] = "\u252F";
+                array[y][x] = "\u252F";
             }
             else if (y == 0 && x == BOARD_SIZE_X - 1) {
-                board_array[y][x] = "\u2513";
+                array[y][x] = "\u2513";
             }
             else if (y > 0 && y < BOARD_SIZE - 1 && x == 0) {
-                board_array[y][x] = "\u2520";
+                array[y][x] = "\u2520";
             }
             else if (y == BOARD_SIZE - 1 && x > 0 && x < BOARD_SIZE_X - 1) {
-                board_array[y][x] = "\u2537";
+                array[y][x] = "\u2537";
             }
             else if (y > 0 && y < BOARD_SIZE - 1 && x == BOARD_SIZE_X - 1) {
-                board_array[y][x] = "\u2528";
+                array[y][x] = "\u2528";
             }
             else if (y == BOARD_SIZE - 1 && x == 0) {
-                board_array[y][x] = "\u2517";
+                array[y][x] = "\u2517";
             }
             else if (y == BOARD_SIZE - 1 && x == BOARD_SIZE_X - 1) {
-                board_array[y][x] = "\u251B";
+                array[y][x] = "\u251B";
             }
             else {
-                board_array[y][x] = "\u253C";
+                array[y][x] = "\u253C";
             }
         }
     }
@@ -300,10 +302,7 @@ void move_cursor(WINDOW *window, char y_or_x, char action, int *y, int *x, char 
 }
 
 
-int suicide_check( int y, int x, int current_player, int logical_board_array[][BOARD_SIZE]) {
-    if (logical_board_array[y][x] != 0) {
-        return 1;
-    }
+int suicide_check(int y, int x, int current_player, int logical_board_array[][BOARD_SIZE]) {
     if (((x - 1 >= 0 && logical_board_array[y][x - 1] == 0) || (x - 1 >= 0 && logical_board_array[y][x - 1] == current_player)) ||
     ((x + 1 < BOARD_SIZE && logical_board_array[y][x + 1] == 0) || (x + 1 < BOARD_SIZE && logical_board_array[y][x + 1] == current_player)) ||
     ((y + 1 < BOARD_SIZE && logical_board_array[y + 1][x] == 0) || (y + 1 < BOARD_SIZE && logical_board_array[y + 1][x] == current_player)) ||
@@ -316,25 +315,28 @@ int suicide_check( int y, int x, int current_player, int logical_board_array[][B
 }
 
 
-int place_stone(WINDOW *window, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X]) {
+int place_stone(WINDOW *window, PLAYER *black, PLAYER *white, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
     char *stone_to_place;
     int y = cursor_y;
     int x = cursor_x / 2;
+    if (logical_board_array[y][x] != 0) {
+        return 0;
+    }
     if (*current_player == BLACK) {
-        if (!suicide_check(y, x, *current_player, logical_board_array)) {
+        if (capture(window, black, white, *current_player, y, x, logical_board_array, board_array, board_array_template) || !suicide_check(y, x, *current_player, logical_board_array)) {
             logical_board_array[y][x] = BLACK;
             stone_to_place = "\u26AB";
-            *current_player += 1;
+            *current_player = WHITE;
         }
         else {
             return 0;
         }
     }
     else if (*current_player == WHITE) {
-        if (!suicide_check(y, x, *current_player, logical_board_array)) {
+        if (capture(window, black, white, *current_player, y, x, logical_board_array, board_array, board_array_template) || !suicide_check(y, x, *current_player, logical_board_array)) {
             logical_board_array[y][x] = WHITE;
             stone_to_place = "\u26AA";
-            *current_player -= 1;
+            *current_player = BLACK;
         }
         else {
             return 0;
@@ -346,4 +348,55 @@ int place_stone(WINDOW *window, int *current_player, int cursor_y, int cursor_x,
     board_array[cursor_y][cursor_x] = stone_to_place;
     wrefresh(window);
     return 1;
+}
+
+
+int capture(WINDOW *window, PLAYER *black, PLAYER *white, int current_player, int y, int x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
+    int enemy;
+    int temporary_y = y, temporary_x = x;
+
+    if (current_player == BLACK) {
+        enemy = WHITE;
+    }
+    else if (current_player == WHITE) {
+        enemy = BLACK;
+    }
+
+    logical_board_array[y][x] = current_player;
+
+    if (x - 1 >= 0 && logical_board_array[y][x - 1] == enemy) { // Check for the enemy around.
+        temporary_x -= 1;
+    }
+    else if (y - 1 >= 0 && logical_board_array[y - 1][x] == enemy) {
+        temporary_y -= 1;
+    }
+    else if (x + 1 < BOARD_SIZE && logical_board_array[y][x + 1] == enemy) {
+        temporary_x += 1;
+    }
+    else if (y + 1 < BOARD_SIZE && logical_board_array[y + 1][x] == enemy) {
+        temporary_y += 1;
+    }
+    else {
+        return 0;
+    }
+
+    if (suicide_check(temporary_y, temporary_x, enemy, logical_board_array)) {
+        if (current_player == BLACK) {
+            black->score += 1;
+        }
+        else if (current_player == WHITE) {
+            white->score += 1;
+        }
+        logical_board_array[temporary_y][temporary_x] = 0;
+        board_array[temporary_y][temporary_x * 2] = board_array_template[temporary_y][temporary_x * 2];
+        wattron(window, COLOR_PAIR(2));
+        mvwprintw(window, BOARD_START_Y + temporary_y, BOARD_START_X + temporary_x * 2, board_array[temporary_y][temporary_x * 2]);
+        mvwprintw(window, BOARD_START_Y + temporary_y, BOARD_START_X + temporary_x * 2 + 1, board_array[temporary_y][temporary_x * 2 + 1]);
+        wattroff(window, COLOR_PAIR(2));
+        wmove(window, y, x); // Move back to the coordinates of the inserted stone.
+        wrefresh(window);
+        return 1;
+    }
+    logical_board_array[y][x] = 0; // If capturing failed, we don't need this stone here.
+    return 0;
 }
