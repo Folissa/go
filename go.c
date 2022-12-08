@@ -135,9 +135,9 @@ void init_ncurses() {
 
 void set_colors(WINDOW *legend_window, WINDOW *board_window) {
     start_color();
-    init_color(100, 242 * 255 / 100, 176 * 255 / 100, 109 * 255 / 100); // Board background color (green).
+    init_color(100, 242 * 255 / 100, 176 * 255 / 100, 109 * 255 / 100); // Board background color (light brown).
     init_color(101, 65 * 255 / 100, 65 * 255 / 100, 65 * 255 / 100); // Font color (dark grey).
-    init_color(102, 144 * 255 / 100, 168 * 255 / 100, 98 * 255 / 100); // Background color (light brown).
+    init_color(102, 144 * 255 / 100, 168 * 255 / 100, 98 * 255 / 100); // Background color (green).
     init_pair(1, 101, COLOR_WHITE);
     init_pair(2, 101, 100);
     init_pair(3, 101, 102);
@@ -192,14 +192,14 @@ void print_legend_var(WINDOW *window, PLAYER *black, PLAYER *white, int legend_y
     legend_y += 1;
     mvwprintw(window, legend_y, LEGEND_START_X, "Last key pressed: %s     ", input_print);
     legend_y += 1;
-    mvwprintw(window, legend_y, LEGEND_START_X, "Score: ");
-    legend_y += 1;
     if (current_player == BLACK) {
         mvwprintw(window, legend_y, LEGEND_START_X, "Now playing: Black     ");
     }
     else {
         mvwprintw(window, legend_y, LEGEND_START_X, "Now playing: White     ");
     }
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "Score: ");
     legend_y += 1;
     mvwprintw(window, legend_y, LEGEND_START_X, "    Black: %d     ", black->score);
     legend_y += 1;
@@ -353,7 +353,9 @@ int place_stone(WINDOW *window, PLAYER *black, PLAYER *white, int *current_playe
 
 int capture(WINDOW *window, PLAYER *black, PLAYER *white, int current_player, int y, int x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
     int enemy;
-    int temporary_y = y, temporary_x = x;
+    int captured = 0;
+    int enemy_coordinates[4][2];
+    int enemy_presence[4] = {0, 0, 0, 0};
 
     if (current_player == BLACK) {
         enemy = WHITE;
@@ -362,39 +364,64 @@ int capture(WINDOW *window, PLAYER *black, PLAYER *white, int current_player, in
         enemy = BLACK;
     }
 
+    for (int i = 0; i < 4; i ++ ) {
+        for (int j = 0; i < 2; i ++ ) {
+            enemy_coordinates[i][j] = 0;
+        }
+    }
+
     logical_board_array[y][x] = current_player;
 
     if (x - 1 >= 0 && logical_board_array[y][x - 1] == enemy) { // Check for the enemy around.
-        temporary_x -= 1;
-    }
-    else if (y - 1 >= 0 && logical_board_array[y - 1][x] == enemy) {
-        temporary_y -= 1;
-    }
-    else if (x + 1 < BOARD_SIZE && logical_board_array[y][x + 1] == enemy) {
-        temporary_x += 1;
-    }
-    else if (y + 1 < BOARD_SIZE && logical_board_array[y + 1][x] == enemy) {
-        temporary_y += 1;
-    }
-    else {
-        return 0;
-    }
+        enemy_coordinates[0][0] = y;
+        enemy_coordinates[0][1] = x - 1;
+        enemy_presence[0] = 1;
 
-    if (suicide_check(temporary_y, temporary_x, enemy, logical_board_array)) {
-        if (current_player == BLACK) {
-            black->score += 1;
+    }
+    if (y - 1 >= 0 && logical_board_array[y - 1][x] == enemy) {
+        enemy_coordinates[1][0] = y - 1;
+        enemy_coordinates[1][1] = x;
+        enemy_presence[1] = 1;
+    }
+    if (x + 1 < BOARD_SIZE && logical_board_array[y][x + 1] == enemy) {
+        enemy_coordinates[2][0] = y;
+        enemy_coordinates[2][1] = x + 1;
+        enemy_presence[2] = 1;
+    }
+    if (y + 1 < BOARD_SIZE && logical_board_array[y + 1][x] == enemy) {
+        enemy_coordinates[3][0] = y + 1;
+        enemy_coordinates[3][1] = x;
+        enemy_presence[3] = 1;
+    }
+    for (int i = 0; i < 4; i ++) {
+        if (enemy_presence[i] == 1 && suicide_check(enemy_coordinates[i][0], enemy_coordinates[i][1], enemy, logical_board_array)) {
+            if (current_player == BLACK) {
+                black->score += 1;
+            }
+            else if (current_player == WHITE) {
+                white->score += 1;
+            }
+            logical_board_array[enemy_coordinates[i][0]][enemy_coordinates[i][1]] = 0;
+            board_array[enemy_coordinates[i][0]][enemy_coordinates[i][1] * 2] = board_array_template[enemy_coordinates[i][0]][enemy_coordinates[i][1] * 2];
+            wattron(window, COLOR_PAIR(2));
+            mvwprintw(window, BOARD_START_Y + enemy_coordinates[i][0], BOARD_START_X + enemy_coordinates[i][1] * 2, board_array[enemy_coordinates[i][0]][enemy_coordinates[i][1] * 2]);
+            wattroff(window, COLOR_PAIR(2));
+            if (BOARD_START_X + enemy_coordinates[i][1] * 2 + 1 < BOARD_START_X + BOARD_SIZE_X) {
+                wattron(window, COLOR_PAIR(2));
+                mvwprintw(window, BOARD_START_Y + enemy_coordinates[i][0], BOARD_START_X + enemy_coordinates[i][1] * 2 + 1, board_array[enemy_coordinates[i][0]][enemy_coordinates[i][1] * 2 + 1]);
+                wattroff(window, COLOR_PAIR(2));
+            }
+            else {
+                wattron(window, COLOR_PAIR(3));
+                mvwprintw(window, BOARD_START_Y + enemy_coordinates[i][0], BOARD_START_X + enemy_coordinates[i][1] * 2 + 1, " ");
+                wattroff(window, COLOR_PAIR(3));
+            }
+            wmove(window, y, x); // Move back to the coordinates of the inserted stone.
+            wrefresh(window);
+            captured = 1;
         }
-        else if (current_player == WHITE) {
-            white->score += 1;
-        }
-        logical_board_array[temporary_y][temporary_x] = 0;
-        board_array[temporary_y][temporary_x * 2] = board_array_template[temporary_y][temporary_x * 2];
-        wattron(window, COLOR_PAIR(2));
-        mvwprintw(window, BOARD_START_Y + temporary_y, BOARD_START_X + temporary_x * 2, board_array[temporary_y][temporary_x * 2]);
-        mvwprintw(window, BOARD_START_Y + temporary_y, BOARD_START_X + temporary_x * 2 + 1, board_array[temporary_y][temporary_x * 2 + 1]);
-        wattroff(window, COLOR_PAIR(2));
-        wmove(window, y, x); // Move back to the coordinates of the inserted stone.
-        wrefresh(window);
+    }
+    if (captured) {
         return 1;
     }
     logical_board_array[y][x] = 0; // If capturing failed, we don't need this stone here.
