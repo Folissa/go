@@ -6,6 +6,8 @@
 #include <curses.h>
 #include <string.h>
 
+#define MAX_FILENAME 100
+
 #define HEIGHT LINES // Height of the windows.
 #define WIDTH ((COLS - 1) / 2)  // Width of the windows.
 
@@ -17,7 +19,7 @@
 
 #define WINDOW_LEGEND_X 0 // Starting x coordinate for the window of the legend.
 #define LEGEND_WIDTH 48  // The length of the longest string in the legend.
-#define LEGEND_HEIGHT 18 // Number of lines of the legend.
+#define LEGEND_HEIGHT 26 // Number of lines of the legend.
 #define LEGEND_START_Y ((HEIGHT - LEGEND_HEIGHT) / 2) // Starting y coordinate for the legend.
 #define LEGEND_START_X ((WIDTH - LEGEND_WIDTH) / 2) // Starting x coordinate for the legend.
 
@@ -45,9 +47,13 @@ void print_legend_const(WINDOW *window, int *legend_y, FILE *file); // Prints ou
 void print_legend_var(WINDOW *window, PLAYER *black, PLAYER *white, int legend_y, char *input_print, int current_player, int cursor_y, int cursor_x); // Prints out the changeable part of the legend on the screen.
 void create_board(char *array[][BOARD_SIZE_X]); // Creates the board.
 void create_logical_board(int logical_board_array[][BOARD_SIZE]); // Create logical board for simplicity.
-void print_board(WINDOW *window, char *board_array[][BOARD_SIZE_X]); // Prints out the board on the screen.
+void print_board(WINDOW *window, int cursor_y, int cursor_x, char *board_array[][BOARD_SIZE_X]); // Prints out the board on the screen.
 void move_cursor(WINDOW *window, char y_or_x, char action, int *y, int *x, char *board_array[][BOARD_SIZE_X]); // Moves the cursor and highlights its position.
 int suicide_check(int y, int x, int current_player, int logical_board_array[][BOARD_SIZE]); // Checks if the stone can be placed.
-int place_stone(WINDOW *window, PLAYER *black, PLAYER *white, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]); // Places stone on a board under certain conditions.
+void place_stone(WINDOW *board_window, WINDOW *legend_window, PLAYER *black, PLAYER *white, int handicap, char **input_print, int legend_y, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]);
+int place_stone_check(WINDOW *window, PLAYER *black, PLAYER *white, int handicap, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]); // Places stone on a board under certain conditions.
 int capture(WINDOW *window, PLAYER *black, PLAYER *white, int current_player, int y, int x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]);
+void save_game(FILE *save_file, char save_filename[MAX_FILENAME], PLAYER *black, PLAYER *white, int legend_y, int cursor_y, int cursor_x, int current_player, int logical_board_array[][BOARD_SIZE], char* board_array[][BOARD_SIZE_X]);
+int load_game(WINDOW *board_window, FILE *save_file, char save_filename[MAX_FILENAME], PLAYER *black, PLAYER *white, int *legend_y, int *cursor_y, int *cursor_x, int *current_player, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X]);
+void erase_board (WINDOW *window, int cursor_y, int cursor_x);
 #endif //GO_GO_H

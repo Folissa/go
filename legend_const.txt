@@ -9,4 +9,3 @@ Controls:
     n - start a new game
     l - load the game state
     f - finish the game
-Current cursor position:

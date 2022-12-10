@@ -9,15 +9,18 @@ int main() {
     WINDOW *board_window = newwin(HEIGHT, WIDTH, 0, WINDOW_BOARD_X);
 
     PLAYER *black;
-    black = create_player(BLACK);
     PLAYER *white;
+
+    black = create_player(BLACK);
     white = create_player(WHITE);
 
     FILE *legend_const;
+    FILE *save_file;
 
 
     char *board_array[BOARD_SIZE][BOARD_SIZE_X];
     char *board_array_template[BOARD_SIZE][BOARD_SIZE_X];
+    char save_filename[MAX_FILENAME];
     char *input_print = "";
 
     int logical_board_array[BOARD_SIZE][BOARD_SIZE];
@@ -25,17 +28,22 @@ int main() {
     int cursor_y, cursor_x;
     int input;
     int current_player;
+    int handicap = 0;
+    int game_started = 0;
 
 
     set_colors(legend_window, board_window);
+
     legend_const = fopen("legend_const.txt", "r");
     if (legend_const == NULL) {
         endwin();
         return 1;
     }
+
     create_board(board_array_template);
     new_game(legend_window, board_window, legend_const, black, white, &legend_y, &cursor_y, &cursor_x, &input_print, &current_player, logical_board_array, board_array);
     fclose(legend_const);
+
     do {
         print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
         input = getch();
@@ -67,33 +75,17 @@ int main() {
             case 'i':
                 input_print = "i";
                 print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
-                int exit = 0;
-                while(exit != 1) {
-                    input = getch();
-                    switch (input) {
-                        case '\n':
-                            exit = place_stone(board_window, black, white, &current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
-                            if (exit == 1) {
-                                input_print = "enter";
-                                print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
-                                place_stone(board_window, black, white, &current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
-                                break;
-                            }
-                            else {
-                                exit = 1;
-                                break;
-                            }
-                        case 'c':
-                            input_print = "c";
-                            exit = 1;
-                            break;
-                        default:
-                            break;
-                    }
+                place_stone(board_window, legend_window, black, white, handicap, &input_print, legend_y, &current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
+                if (game_started == 0 && handicap == 0) {
+                    game_started = 1;
                 }
                 break;
             case 's':
                 input_print = "s";
+                print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
+                scanw("%s", save_filename);
+                input_print = save_filename;
+                save_game(save_file, save_filename, black, white, legend_y, cursor_y, cursor_x, current_player, logical_board_array, board_array);
                 break;
             case 'n':
                 input_print = "n";
@@ -107,9 +99,48 @@ int main() {
                 break;
             case 'l':
                 input_print = "l";
+                print_legend_var(legend_window, black, white, legend_y, input_print, current_player, cursor_y, cursor_x);
+                scanw("%s", save_filename);
+                input_print = save_filename;
+                load_game(board_window, save_file, save_filename, black, white, &legend_y, &cursor_y, &cursor_x, &current_player, logical_board_array, board_array);
                 break;
             case 'f':
                 input_print = "f";
+                break;
+            case 'h':
+                if (handicap == 1 || game_started) {
+                    break;
+                }
+                handicap = 1;
+                input_print = "h";
+                break;
+            case 'e':
+                if (game_started) {
+                    break;
+                }
+                handicap = 0;
+                current_player = WHITE;
+                input_print = "e";
+                break;
+            case '1':
+                if (game_started) {
+                    break;
+                }
+                break;
+            case '2':
+                if (game_started) {
+                    break;
+                }
+                break;
+            case '3':
+                if (game_started) {
+                    break;
+                }
+                break;
+            case 'x':
+                if (game_started) {
+                    break;
+                }
                 break;
             default:
                 break;
@@ -117,8 +148,10 @@ int main() {
     } while (input != 'q');
 
     endwin(); // Ends the curses mode
+
     free(black);
     free(white);
+
     return 0;
 }
 
@@ -141,6 +174,7 @@ void set_colors(WINDOW *legend_window, WINDOW *board_window) {
     init_pair(1, 101, COLOR_WHITE);
     init_pair(2, 101, 100);
     init_pair(3, 101, 102);
+    init_pair(4, 102, 102);
     wbkgd(stdscr, COLOR_PAIR(3));
     wbkgd(legend_window, COLOR_PAIR(3));
     wbkgd(board_window, COLOR_PAIR(3));
@@ -167,7 +201,54 @@ void new_game(WINDOW *legend_window, WINDOW *board_window, FILE *legend_const, P
     print_legend_const(legend_window, legend_y, legend_const);
     print_legend_var(legend_window, black, white, *legend_y, *input_print, *current_player, *cursor_y, *cursor_x);
     create_board(board_array);
-    print_board(board_window, board_array);
+    print_board(board_window, *cursor_y, *cursor_x, board_array);
+}
+
+
+void save_game(FILE *save_file, char save_filename[MAX_FILENAME], PLAYER *black, PLAYER *white, int legend_y, int cursor_y, int cursor_x, int current_player, int logical_board_array[][BOARD_SIZE], char* board_array[][BOARD_SIZE_X]) {
+    save_file = fopen(save_filename, "w");
+    fprintf(save_file, "%d\n", legend_y);
+    fprintf(save_file, "%d\n", cursor_y);
+    fprintf(save_file, "%d\n", cursor_x);
+    fprintf(save_file, "%d\n", black->score);
+    fprintf(save_file, "%d\n", white->score);
+    fprintf(save_file, "%d\n", current_player);
+    for (int y = 0; y < BOARD_SIZE; y ++) {
+        for (int x = 0; x < BOARD_SIZE; x ++) {
+            fprintf(save_file, "%d\n", logical_board_array[y][x]);
+        }
+    }
+    fclose(save_file);
+}
+
+
+int load_game(WINDOW *board_window, FILE *save_file, char save_filename[MAX_FILENAME], PLAYER *black, PLAYER *white, int *legend_y, int *cursor_y, int *cursor_x, int *current_player, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X]) {
+    save_file = fopen(save_filename, "r");
+    if (save_file == NULL) {
+        return 0;
+    }
+    fscanf(save_file, "%d", legend_y);
+    fscanf(save_file, "%d", cursor_y);
+    fscanf(save_file, "%d", cursor_x);
+    fscanf(save_file, "%d", &(black->score));
+    fscanf(save_file, "%d", &(white->score));
+    fscanf(save_file, "%d", current_player);
+    create_board(board_array);
+    print_board(board_window, *cursor_y, *cursor_x, board_array);
+    for (int y = 0; y < BOARD_SIZE; y ++) {
+        for (int x = 0; x < BOARD_SIZE; x ++) {
+            fscanf(save_file, "%d", &logical_board_array[y][x]);
+            if (logical_board_array[y][x] == BLACK) {
+                board_array[y][x * 2] = "\u26AB";
+            }
+            else if (logical_board_array[y][x] == WHITE) {
+                board_array[y][x * 2] = "\u26AA";
+            }
+        }
+    }
+    fclose(save_file);
+    print_board(board_window, *cursor_y, *cursor_x, board_array);
+    return 1;
 }
 
 
@@ -186,11 +267,27 @@ void print_legend_const(WINDOW *window, int *legend_y, FILE *file) {
 
 void print_legend_var(WINDOW *window, PLAYER *black, PLAYER *white, int legend_y, char *input_print, int current_player, int cursor_y, int cursor_x) {
     wattron(window, A_BOLD);
+    mvwprintw(window, legend_y, LEGEND_START_X, "    h - start handicap");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "    e - end handicap");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "Choose the size of the board: ");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "    1 - 9x9");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "    2 - 13x13");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "    3 - 19x19");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "    x - custom");
+    legend_y += 1;
+    mvwprintw(window, legend_y, LEGEND_START_X, "Current cursor position: ");
+    legend_y += 1;
     mvwprintw(window, legend_y, LEGEND_START_X, "    X: %d     ", cursor_x / 2 + 1);
     legend_y += 1;
     mvwprintw(window, legend_y, LEGEND_START_X, "    Y: %d     ", cursor_y + 1);
     legend_y += 1;
-    mvwprintw(window, legend_y, LEGEND_START_X, "Last key pressed: %s     ", input_print);
+    mvwprintw(window, legend_y, LEGEND_START_X, "Last input: %s     ", input_print);
     legend_y += 1;
     if (current_player == BLACK) {
         mvwprintw(window, legend_y, LEGEND_START_X, "Now playing: Black     ");
@@ -259,23 +356,34 @@ void create_logical_board(int logical_board_array[][BOARD_SIZE]) {
 }
 
 
-void print_board(WINDOW *window, char *board_array[][BOARD_SIZE_X]) {
+void print_board(WINDOW *window, int cursor_y, int cursor_x, char *board_array[][BOARD_SIZE_X]) {
     for (int y = 0; y < BOARD_SIZE; y ++) {
         for (int x = 0; x < BOARD_SIZE_X; x++) {
-            if (x == 0 && y == 0) {
+            if (y == cursor_y && x == cursor_x) {
                 wattron(window, COLOR_PAIR(1));
-                mvwprintw(window, y + BOARD_START_Y, x + BOARD_START_X, board_array[y][x]);
+                mvwprintw(window, BOARD_START_Y + y, BOARD_START_X + x, "%s", board_array[y][x]);
                 wattroff(window, COLOR_PAIR(1));
             }
             else {
                 wattron(window, COLOR_PAIR(2));
-                mvwprintw(window, y + BOARD_START_Y, x + BOARD_START_X, board_array[y][x]);
+                mvwprintw(window, BOARD_START_Y + y, BOARD_START_X + x, "%s", board_array[y][x]);
                 wattroff(window, COLOR_PAIR(2));
             }
         }
     }
     box(window, 0, 0);
     wrefresh(window);
+}
+
+
+void erase_board (WINDOW *window, int cursor_y, int cursor_x) {
+    for (int y = 0; y < BOARD_SIZE; y++) {
+        for (int x = 0; x < BOARD_SIZE_X; x++) {
+            wattron(window, COLOR_PAIR(4));
+            mvwprintw(window, BOARD_START_Y + y, BOARD_START_X + x, " ");
+            wattroff(window, COLOR_PAIR(4));
+        }
+    }
 }
 
 
@@ -315,7 +423,29 @@ int suicide_check(int y, int x, int current_player, int logical_board_array[][BO
 }
 
 
-int place_stone(WINDOW *window, PLAYER *black, PLAYER *white, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
+void place_stone(WINDOW *board_window, WINDOW *legend_window, PLAYER *black, PLAYER *white, int handicap, char **input_print, int legend_y, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
+    char input;
+    int exit = 0;
+    while(exit != 1) {
+        input = getch();
+        if (input == '\n') {
+            exit = place_stone_check(board_window, black, white, handicap, current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
+            if (exit == 1) {
+                *input_print = "enter";
+                print_legend_var(legend_window, black, white, legend_y, *input_print, *current_player, cursor_y, cursor_x);
+                place_stone_check(board_window, black, white, handicap, current_player, cursor_y, cursor_x, logical_board_array, board_array, board_array_template);
+                break;
+            }
+        }
+        else if (input == 'c') {
+            *input_print = "c";
+            exit = 1;
+        }
+    }
+}
+
+
+int place_stone_check(WINDOW *window, PLAYER *black, PLAYER *white, int handicap, int *current_player, int cursor_y, int cursor_x, int logical_board_array[][BOARD_SIZE], char *board_array[][BOARD_SIZE_X], char *board_array_template[][BOARD_SIZE_X]) {
     char *stone_to_place;
     int y = cursor_y;
     int x = cursor_x / 2;
@@ -326,7 +456,9 @@ int place_stone(WINDOW *window, PLAYER *black, PLAYER *white, int *current_playe
         if (capture(window, black, white, *current_player, y, x, logical_board_array, board_array, board_array_template) || !suicide_check(y, x, *current_player, logical_board_array)) {
             logical_board_array[y][x] = BLACK;
             stone_to_place = "\u26AB";
-            *current_player = WHITE;
+            if (!handicap) {
+                *current_player = WHITE;
+            }
         }
         else {
             return 0;
